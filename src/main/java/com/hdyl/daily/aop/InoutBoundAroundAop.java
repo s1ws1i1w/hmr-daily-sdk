@@ -5,6 +5,9 @@ import cn.hutool.core.util.RandomUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.hdyl.daily.dto.RequestInfoDTO;
+import com.hdyl.daily.enums.ExcutorType;
+import com.hdyl.daily.exception.BusinessException;
+import com.sun.corba.se.spi.orbutil.threadpool.ThreadPoolManager;
 import io.swagger.annotations.ApiOperation;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +16,10 @@ import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -28,17 +35,24 @@ import java.lang.reflect.Method;
  */
 @Slf4j
 @Data
+@Component
+@ConfigurationProperties(prefix = "aop.init.config")
 @Aspect
 public class InoutBoundAroundAop {
 
     //用于保存链路Id
     private static ThreadLocal<String> threadLocal=new ThreadLocal<>();
+    @Autowired
+    private MongoTemplate mongoTemplate;
 
     //controller初始化参数
     private String  cInitProperty;
 
     //server层切面初始化参数
     private String sInitProperty;
+
+    //请求的token
+    private String reqToken;
 
     //拼接切点
     @Pointcut("execution(* getCInitProperty())")
@@ -63,8 +77,6 @@ public class InoutBoundAroundAop {
         //判断当前的请求参数是否为null
         if (ObjectUtil.isNotNull(servletRequestAttributes)) {
             HttpServletRequest request = servletRequestAttributes.getRequest();
-            //获取请求的token
-            String reqToken = request.getHeader("");
             //请求链接
             String reqUrl = request.getRequestURL().toString();
             //请求方法
@@ -115,7 +127,7 @@ public class InoutBoundAroundAop {
                         reqMethodDescription = annotation.value();
                     }
                 }
-                log.info(">>>>>>请求入站:{}, " + "请求类名:{}, " + "请求地址:{}, " + "请求方法:{}, " + "请求参数:{}, " + "请求ip:{}, " + "认证Token:{}", threadLocal.get(), reqClassName, reqUrl, reqMethod, reqArgs, reqIp, reqToken);
+                log.info(">>>>>>请求入站:{}, " + "请求类名:{}, " + "请求地址:{}, " + "请求方法:{}, " + "请求参数:{}, " + "请求ip:{}, " + "认证Token:{}", threadLocal.get(), reqClassName, reqUrl, reqMethod, reqArgs, reqIp);
                 // 方法执行
                 Object result = joinPoint.proceed();
                 // 初始化请求结束时间
@@ -132,18 +144,32 @@ public class InoutBoundAroundAop {
                 return result;
             } catch (Exception e) {
                 String exJson = JSON.toJSONString(e);
-                log.error("!!!!!!方法调用异常:{}, " + "请求类名:{}, " + "请求地址:{}, " + "请求方法:{}, " + "请求参数:{}, " + "请求结果:{}, " + "请求响应时间:{}, " + "请求ip:{}, " + "认证Token:{}, " + "异常原因:{}", threadLocal.get(), reqClassName, reqUrl, reqMethod, reqArgs, reqResultJson, cosTime, reqIp, reqToken, exJson);
+                log.error("!!!!!!方法调用异常:{}, " + "请求类名:{}, " + "请求地址:{}, " + "请求方法:{}, " + "请求参数:{}, " + "请求结果:{}, " + "请求响应时间:{}, " + "请求ip:{}, " + "认证Token:{}, " + "异常原因:{}", threadLocal.get(), reqClassName, reqUrl, reqMethod, reqArgs, reqResultJson, cosTime, reqIp, exJson);
                 if (e instanceof Exception) {
                     JSONObject exObj = new JSONObject();
+                    exObj.put("code", ((BusinessException) e).getCode());
+                    exObj.put("msg", ((BusinessException) e).getDescription());
                     requestInfoDTO.setException(exObj.toJSONString());
                 }
                 throw e;
             } finally {
-
+                // 链路id必须释放,否则后续线程可能出现共享链路id导致日志错乱的情况
+                threadLocal.remove();
+                requestInfoDTO.setReqToken(reqToken);
+                requestInfoDTO.setReqUrl(reqUrl);
+                requestInfoDTO.setReqMethod(reqMethod);
+                requestInfoDTO.setReqMethodDescription(reqMethodDescription);
+                requestInfoDTO.setReqIp(reqIp);
+                requestInfoDTO.setReqTargetClassName(reqClassName);
+                requestInfoDTO.setReqArgs(reqArgs);
+                requestInfoDTO.setTraceId(traceId);
+                requestInfoDTO.setCosTime(cosTime);
+                requestInfoDTO.setReqResultJson(reqResultJson);
+                //将链路信息存储到Mongo中
+                mongoTemplate.save(requestInfoDTO,"trace_daily");
             }
         } else {
             return joinPoint.proceed();
         }
-
     }
 }

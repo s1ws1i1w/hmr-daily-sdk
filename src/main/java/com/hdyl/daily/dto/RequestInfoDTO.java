@@ -34,4 +34,6 @@ public class RequestInfoDTO {
     private Byte isSuccess;
     //异常信息
     private String exception;
+    //链路Id
+    private String traceId;
 }
