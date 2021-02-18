@@ -68,17 +68,17 @@ public class InoutBoundAroundAop {
             //请求链接
             String reqUrl = request.getRequestURL().toString();
             //请求方法
-            String reqMethod;
+            String reqMethod=null;
             //请求Ip
             String reqIp = request.getRemoteHost();
             //请求类名
-            String reqClassName;
+            String reqClassName=null;
             //请求参数
-            String reqArgs;
+            String reqArgs=null;
             //请求响应如果
-            String reqResultJson;
+            String reqResultJson=null;
             //请求方法描述
-            String reqMethodDescription;
+            String reqMethodDescription=null;
             //方法执行时间
             long cosTime = 0L;
             //定义链路Id
@@ -132,7 +132,7 @@ public class InoutBoundAroundAop {
                 return result;
             } catch (Exception e) {
                 String exJson = JSON.toJSONString(e);
-                log.error("!!!!!!方法调用异常:{}, " + "请求类名:{}, " + "请求地址:{}, " + "请求方法:{}, " + "请求参数:{}, " + "请求结果:{}, " + "请求响应时间:{}, " + "请求ip:{}, " + "认证Token:{}, " + "异常原因:{}", traceThreadLocal.get(), reqTargetClassName, reqUrl, reqMethod, reqArgs, reqResultJson, costTime, reqIp, reqToken, exJson);
+                log.error("!!!!!!方法调用异常:{}, " + "请求类名:{}, " + "请求地址:{}, " + "请求方法:{}, " + "请求参数:{}, " + "请求结果:{}, " + "请求响应时间:{}, " + "请求ip:{}, " + "认证Token:{}, " + "异常原因:{}", threadLocal.get(), reqClassName, reqUrl, reqMethod, reqArgs, reqResultJson, cosTime, reqIp, reqToken, exJson);
                 if (e instanceof Exception) {
                     JSONObject exObj = new JSONObject();
                     requestInfoDTO.setException(exObj.toJSONString());
