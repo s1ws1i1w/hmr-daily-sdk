@@ -6,6 +6,7 @@ import org.mybatis.spring.SqlSessionTemplate;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -19,7 +20,8 @@ import javax.sql.DataSource;
  * @Date:2021/2/19 0:57
  * @version:1.0
  */
-@Configuration
+
+@ConditionalOnMissingBean
 @MapperScan(
         basePackages = "com.hdyl.daily",
         sqlSessionTemplateRef = "majorSqlSessionTemplate"
@@ -27,7 +29,7 @@ import javax.sql.DataSource;
 public class MapperConfig {
 
         @Autowired
-        @Qualifier("majorDataSource")
+        @Qualifier("defaultDataSource")
         private DataSource majorDataSource;
         /**
          * 数据工厂初始化
@@ -38,7 +40,7 @@ public class MapperConfig {
          * @date 2020年5月27日 18:25:00
          */
         @Primary
-        @Bean("majorSqlSessionFactory")
+        @Bean("defaultSqlSessionFactory")
         public SqlSessionFactory majorSqlSessionFactory() throws Exception {
             SqlSessionFactoryBean sqlSessionFactory = new SqlSessionFactoryBean();
             sqlSessionFactory.setDataSource(majorDataSource);
@@ -55,7 +57,7 @@ public class MapperConfig {
          * @date 2020年5月27日 18:57:58
          */
         @Primary
-        @Bean(name = "majorTransactionManager")
+        @Bean(name = "defaultTransactionManager")
         public DataSourceTransactionManager majorTransactionManager() {
             return new DataSourceTransactionManager(majorDataSource);
         }
@@ -69,7 +71,7 @@ public class MapperConfig {
          * @date 2020年5月27日 18:58:47
          */
         @Primary
-        @Bean(name = "majorSqlSessionTemplate")
+        @Bean(name = "defaultSqlSessionTemplate")
         public SqlSessionTemplate majorSqlSessionTemplate(@Qualifier("majorSqlSessionFactory") SqlSessionFactory sqlSessionFactory) {
             return new SqlSessionTemplate(sqlSessionFactory);
         }

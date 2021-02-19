@@ -1,4 +1,5 @@
 package com.hdyl.daily.config;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
@@ -14,7 +15,7 @@ import javax.sql.DataSource;
 @Configuration
 public class DataSourceConfig {
 
-    @Bean(name = "mysqlSource")
+    @ConditionalOnMissingBean(name = "mysqlSource")
     @ConfigurationProperties(prefix ="spring.datasource.primary")
     public DataSource businessDbDataSource() {
         return DataSourceBuilder.create().build();
